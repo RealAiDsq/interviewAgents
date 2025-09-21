@@ -1,0 +1,32 @@
+[project]
+name = "wordline"
+version = "0.1.0"
+description = ""
+authors = [
+    {name = "董世权",email = "dongshiquan1020@qq.com"}
+]
+readme = "README.md"
+requires-python = ">=3.11,<4.0"
+dependencies = [
+    "langchain (>=0.3.27,<0.4.0)",
+    "langchain-openai (>=0.2.6,<0.3.0)",
+    "fastapi (>=0.116.2,<0.117.0)",
+    "uvicorn (>=0.35.0,<0.36.0)",
+    # 文件上传与解析
+    "python-multipart (>=0.0.9,<0.1.0)",
+    # 文本与文档处理（可选：docx 导出）
+    "python-docx (>=1.1.2,<2.0.0)",
+    # （可选）docx 转 HTML/纯文本提取，若不需要可移除
+    "mammoth (>=1.6.0,<2.0.0)",
+    # Markdown 渲染（导出/预览链路复用）
+    "markdown (>=3.6,<4.0)"
+
+]
+
+
+[build-system]
+requires = ["poetry-core>=2.0.0,<3.0.0"]
+build-backend = "poetry.core.masonry.api"
+
+[tool.poetry]
+package-mode = false

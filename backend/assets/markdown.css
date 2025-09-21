@@ -1,0 +1,22 @@
+/* 与前端 src/styles.css 中 .markdown 风格保持一致 */
+/* 页面边距更宽，改善阅读体验 */
+@page { size: A4; margin: 20mm; }
+body { margin: 0; background: #ffffff; }
+.markdown {
+  font-family: -apple-system, BlinkMacSystemFont, 'SF Pro Text', 'SF Pro Display', 'Helvetica Neue', Helvetica, Arial, system-ui, Roboto, "Noto Sans CJK SC", "Noto Sans CJK", "Apple Color Emoji", "Segoe UI Emoji", sans-serif;
+  color: #111827;
+  line-height: 1.7;
+  font-size: 12pt;
+}
+.markdown h1, .markdown h2, .markdown h3 { margin-top: 1.2em; }
+.markdown h1 { font-size: 20pt; font-weight: 700; }
+.markdown h2 { font-size: 16pt; font-weight: 600; }
+.markdown h3 { font-size: 14pt; font-weight: 600; }
+.markdown p { line-height: 1.7; }
+.markdown pre, .markdown code { font-family: ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, "Liberation Mono", "Courier New", monospace; }
+.markdown pre { background: #f3f4f6; padding: 10px; border-radius: 6px; overflow: auto; }
+.markdown code { background: #f3f4f6; padding: 2px 4px; border-radius: 4px; }
+.markdown table { width: 100%; border-collapse: collapse; margin: 1em 0; }
+.markdown th, .markdown td { border: 1px solid #e5e7eb; padding: 6px 8px; text-align: left; }
+.markdown blockquote { border-left: 4px solid #e5e7eb; padding-left: 12px; margin: 12px 0; color: #6b7280; }
+.markdown blockquote p { margin: 6px 0; }
