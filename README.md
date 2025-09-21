@@ -5,6 +5,7 @@
 - 前端（Vite + React + TypeScript）：左侧操作区（上传/处理/导出），右侧实时 Markdown 预览。
 
 ==============================
+
 一、各平台安装指南（Windows / macOS / Linux）
 ==============================
 
@@ -163,6 +164,7 @@ export WKHTMLTOPDF_BIN=/usr/bin/wkhtmltopdf
 cd ../backend; poetry run python src/server.py
 
 ==============================
+
 二、项目结构
 ==============================
 
@@ -172,6 +174,7 @@ cd ../backend; poetry run python src/server.py
 - demand.md  需求文档
 
 ==============================
+
 三、运行与验证
 ==============================
 
@@ -206,6 +209,7 @@ curl -X POST 'http://localhost:8000/api/export?fmt=pdf' -H 'Content-Type: applic
 # http://localhost:5173 打开页面，上传 .txt/.md/.doc/.docx → 解析 → 处理 → 预览 → 导出
 
 ==============================
+
 四、环境变量（可选）
 ==============================
 
@@ -221,6 +225,7 @@ curl -X POST 'http://localhost:8000/api/export?fmt=pdf' -H 'Content-Type: applic
   - macOS/Linux：export WKHTMLTOPDF_BIN=/usr/local/bin/wkhtmltopdf
 
 ==============================
+
 五、常见问题排查
 ==============================
 
@@ -236,6 +241,7 @@ curl -X POST 'http://localhost:8000/api/export?fmt=pdf' -H 'Content-Type: applic
   - 已内置自动转换：需要系统安装 LibreOffice(soffice) 或 Pandoc，确保在 PATH 或设置 SOFFICE_BIN
 
 ==============================
+
 六、已覆盖的需求要点与后续迭代
 ==============================
 
