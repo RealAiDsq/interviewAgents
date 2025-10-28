@@ -16,7 +16,7 @@ from typing import List, Tuple
 from src.schemas import Block, Document
 
 
-NAME_CHARS = r"[\u4e00-\u9fffA-Za-z0-9_.·\-（）()“”'\"\s]{1,30}"
+NAME_CHARS = r"[\u4e00-\u9fffA-Za-z0-9_.·\-（）()""'\"\s]{1,30}"
 TIME_RE = r"\d{1,2}:\d{2}(?::\d{2})?"
 
 # 带时间的头部（整行），允许行尾紧跟内容：张三 00:01:02：今天……
@@ -27,6 +27,90 @@ TIME_HEADER_RE = re.compile(
 # 行内：姓名（可带 [time]）+ 冒号 + 同行内容
 INLINE_HEADER_RE = re.compile(rf"^\s*(?P<name>{NAME_CHARS})(?:\s*\[(?P<time>{TIME_RE})\])?\s*[：:]\s*(?P<rest>.+)$")
 
+# 日期相关正则，用于过滤和识别
+DATE_PREFIX_INLINE_RE = re.compile(r"^\s*\d{4}年\d{1,2}月\d{1,2}日(?:\s*\d{1,2}:\d{2}(?::\d{2})?)?\s*")
+DATE_LINE_RE = re.compile(r"^\s*(?:日[期历]?|日期|时间|Date|Time|采访(?:时间|日期))?\s*[:：\-—–]?\s*\d{4}[\s年/.\\-]\d{1,2}[\s月/.\\-]\d{1,2}\s*(?:日|号)?(?:\s*\d{1,2}[:.：]\d{2}(?:[:.：]\d{2})?)?\s*$")
+# 修改DATE_PATTERN以支持匹配带时间的日期
+DATE_PATTERN = re.compile(r"\d{4}[\s年/.\\-]\d{1,2}[\s月/.\\-]\d{1,2}\s*(?:日|号)?(?:\s*\d{1,2}[:.：]\d{2}(?:[:.：]\d{2})?)?")
+
+# 新增日期时间检测正则表达式 - 增强检测能力
+CHINESE_DATE_TIME_RE = re.compile(r"^\s*\d{4}年\d{1,2}月\d{1,2}日\d{1,2}[:：]?\d{2}\s*$")
+SHORT_DATE_TIME_RE = re.compile(r"^\s*\d{4}年\d{1,2}月\d{1,2}日\d{1,2}\s*$")  # 支持如"2025年08月19日17"
+BARE_YEAR_MONTH_DAY_RE = re.compile(r"^\s*\d{4}年\d{1,2}月\d{1,2}日\s*$")  # 仅年月日
+YEAR_IN_BRACKETS_RE = re.compile(r"^\s*\[\d{4}年\d{1,2}月\d{1,2}日(?:\d{1,2}[:：]\d{2})?\]\s*$")  # 匹配 [2025年08月19日17:21]
+
+# 用于检测时间格式的正则表达式
+DATETIME_PATTERN = re.compile(r"(?:\d{2,4}[\s年/.\\-]\d{1,2}[\s月/.\\-]\d{1,2}\s*(?:日|号)?)?(?:\s*\d{1,2}[:.：]\d{1,2}(?:[:.：]\d{1,2})?)?\s*$")
+TIME_ONLY_RE = re.compile(r"^\s*\d{1,2}[:.：]\d{2}(?:[:.：]\d{2})?\s*$")
+YEAR_MONTH_DAY_HOUR_RE = re.compile(r"^\s*\d{4}年\d{1,2}月\d{1,2}日\d{1,2}[点时:：].*$")
+YEAR_MONTH_DAY_RE = re.compile(r"^\s*\d{4}年\d{1,2}月\d{1,2}日.*$")
+MONTH_DAY_RE = re.compile(r"^\s*\d{1,2}月\d{1,2}[日号].*$")
+
+def strip_leading_date_lines(lines: List[str]) -> List[str]:
+    cleaned = list(lines)
+    while cleaned:
+        head = cleaned[0]
+        if not head.strip():
+            cleaned.pop(0)
+            continue
+        stripped = head.strip()
+        
+        # 增强日期时间检测：检查多种格式
+        if (DATE_LINE_RE.match(stripped) or 
+            CHINESE_DATE_TIME_RE.match(stripped) or 
+            SHORT_DATE_TIME_RE.match(stripped) or
+            BARE_YEAR_MONTH_DAY_RE.match(stripped) or
+            YEAR_IN_BRACKETS_RE.match(stripped)):
+            cleaned.pop(0)
+            continue
+            
+        # 处理行内日期前缀
+        new_head = DATE_PREFIX_INLINE_RE.sub("", head, count=1)
+        new_head = re.sub(r"^[\s:：\-—–]+", "", new_head)
+        if new_head != head:
+            if new_head.strip():
+                cleaned[0] = new_head
+                continue
+            cleaned.pop(0)
+            continue
+        break
+    return cleaned
+
+
+def is_datetime_format(s: str) -> bool:
+    """检查字符串是否可能是日期时间格式"""
+    if not s:
+        return False
+    
+    # 检查常见日期时间格式
+    patterns = [
+        DATETIME_PATTERN,
+        TIME_ONLY_RE,
+        YEAR_MONTH_DAY_HOUR_RE,
+        YEAR_MONTH_DAY_RE,
+        MONTH_DAY_RE,
+        DATE_PATTERN,
+        CHINESE_DATE_TIME_RE,
+        SHORT_DATE_TIME_RE,
+        BARE_YEAR_MONTH_DAY_RE,
+        YEAR_IN_BRACKETS_RE
+    ]
+    
+    for pattern in patterns:
+        if pattern.search(s):
+            return True
+            
+    # 检查是否包含年月日时分的组合
+    has_year = "年" in s or re.search(r"\d{4}", s)
+    has_month = "月" in s
+    has_day = "日" in s or "号" in s
+    has_time = re.search(r"\d{1,2}[:.：]\d{2}", s)
+    
+    # 如果同时包含日期和时间元素，很可能是日期时间
+    if (has_year and has_month) or (has_month and has_day) or (has_day and has_time):
+        return True
+    
+    return False
 
 def _is_name_only_header(lines: List[str], idx: int) -> str:
     s = lines[idx].strip()
@@ -34,6 +118,21 @@ def _is_name_only_header(lines: List[str], idx: int) -> str:
         return ""
     # 不能含标点或数字
     if re.search(r"[。！？!?,，；;：:…]", s) or re.search(r"\d", s):
+        return ""
+    # 排除可能包含日期的行
+    if DATE_PATTERN.search(s) or DATE_LINE_RE.match(s):
+        return ""
+    # 增强检测，排除所有可能是日期时间格式的字符串
+    if re.search(r"\d{4}[\s年/.\\-]\d{1,2}[\s月/.\\-]\d{1,2}", s):
+        return ""
+    # 排除纯时间格式 (如 "12:30" 或 "12:30:45")
+    if TIME_ONLY_RE.match(s):
+        return ""
+    # 增强检测各种日期时间格式
+    if is_datetime_format(s):
+        return ""
+    # 检查方括号格式的日期时间
+    if YEAR_IN_BRACKETS_RE.match(s):
         return ""
     if not re.fullmatch(r"[\u4e00-\u9fffA-Za-z·\-\._（）()]{1,20}", s):
         return ""
@@ -49,11 +148,53 @@ def _is_name_only_header(lines: List[str], idx: int) -> str:
     return s
 
 
+def preprocess_text(text: str) -> str:
+    """预处理文本，去除标题和日期等元信息"""
+    lines = text.split("\n")
+    cleaned = []
+    skipping_header = True
+    
+    for line in lines:
+        stripped = line.strip()
+        # 跳过空行
+        if not stripped:
+            cleaned.append("")
+            continue
+            
+        # 跳过开头的日期行，增强检测多种日期时间格式
+        if skipping_header and (
+            DATE_LINE_RE.match(stripped) or 
+            DATE_PATTERN.match(stripped) or
+            CHINESE_DATE_TIME_RE.match(stripped) or
+            SHORT_DATE_TIME_RE.match(stripped) or
+            BARE_YEAR_MONTH_DAY_RE.match(stripped) or
+            YEAR_IN_BRACKETS_RE.match(stripped)
+        ):
+            continue
+            
+        # 一旦遇到非日期行，不再跳过
+        skipping_header = False
+        
+        # 检查是否是单独的日期行（不仅在开头）
+        if (CHINESE_DATE_TIME_RE.match(stripped) or 
+            SHORT_DATE_TIME_RE.match(stripped) or
+            BARE_YEAR_MONTH_DAY_RE.match(stripped) or
+            YEAR_IN_BRACKETS_RE.match(stripped)):
+            continue
+        
+        cleaned.append(line)
+        
+    return "\n".join(cleaned)
+
 def parse_text_to_blocks(text: str, allow_name_only_header: bool = True) -> Document:
-    # 统一行结束符
-    text = (text or "").replace("\r\n", "\n").replace("\r", "\n")
+    text = (text or "")
+    # 预处理文本，清除文档顶部日期信息
+    text = preprocess_text(text)
+    text = text.replace("\r\n", "\n").replace("\r", "\n")
     # 清理连续下划线（常见装饰线）
     lines = [re.sub(r"_+", "", ln) for ln in text.split("\n")]
+    # 再次应用日期行过滤
+    lines = strip_leading_date_lines(lines)
     n = len(lines)
 
     headers = []  # 每项: {i, speaker, time, kind, inline_rest(optional)}
@@ -92,6 +233,12 @@ def parse_text_to_blocks(text: str, allow_name_only_header: bool = True) -> Docu
                 continue
             name = _is_name_only_header(lines, i)
             if name:
+                # 检查是否为纯时间格式
+                if re.match(r"^\s*\d{1,2}[:.：]\d{2}(?:[:.：]\d{2})?\s*$", name):
+                    continue
+                # 检查是否过短且包含数字（可能是时间）
+                if len(name) <= 5 and re.search(r"\d", name):
+                    continue
                 headers.append({
                     "i": i,
                     "speaker": name,

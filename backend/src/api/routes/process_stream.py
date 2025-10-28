@@ -1,20 +1,18 @@
 from __future__ import annotations
 
-import json
-from typing import Any, Dict, List, Optional
+from typing import Any, Dict, List
 
-from fastapi import APIRouter, HTTPException, Query
+from fastapi import APIRouter, HTTPException
 from fastapi.responses import StreamingResponse
-from pydantic import BaseModel
 
-from src.services.llm_processor import sse_stream_blocks
+from src.schemas import ProcessOptions
+from src.services.llm_processor import DEFAULT_SYSTEM_PROMPT, sse_stream_blocks
+from src.core.chat_llm.llms import ChatLLMFactory
 
 
-class ProcessStreamRequest(BaseModel):
+class ProcessStreamRequest(ProcessOptions):
     blocks: List[Dict[str, Any]]
-    provider: str = "zhipu"  # 可选：qwen/kimi/zhipu
-    model: Optional[str] = None
-    temperature: float = 0.3
+    provider: str = "zhipu"  # 默认 provider
 
 
 router = APIRouter(prefix="/process", tags=["process"])
@@ -24,17 +22,28 @@ router = APIRouter(prefix="/process", tags=["process"])
 async def process_stream(req: ProcessStreamRequest):
     if not req.blocks:
         raise HTTPException(status_code=400, detail="blocks 不能为空")
-    provider = req.provider
-    model = req.model or {
-        "zhipu": "GLM-4-Flash",
-        "qwen": "qwen2.5-7b-instruct",
-        "kimi": "moonshot-v1-32k",
-    }.get(provider, None)
-    if not model:
-        raise HTTPException(status_code=400, detail=f"未知 provider: {provider}，请提供 model")
+    provider = req.provider or ChatLLMFactory.get_default_provider()
+    try:
+        ChatLLMFactory.ensure_provider_ready(provider)
+    except ValueError as exc:
+        raise HTTPException(status_code=400, detail=str(exc)) from exc
+
+    try:
+        model, _ = await ChatLLMFactory.resolve_model(provider, req.model)
+    except ValueError as exc:
+        raise HTTPException(status_code=400, detail=str(exc)) from exc
+
+    system_prompt = (req.system_prompt or DEFAULT_SYSTEM_PROMPT).strip() or DEFAULT_SYSTEM_PROMPT
 
     async def event_gen():
-        async for chunk in sse_stream_blocks(req.blocks, provider=provider, model=model, temperature=req.temperature):
+        async for chunk in sse_stream_blocks(
+            req.blocks,
+            provider=provider,
+            model=model,
+            temperature=req.temperature,
+            system_prompt=system_prompt,
+            parallel=req.parallel,
+        ):
             yield chunk
 
     return StreamingResponse(event_gen(), media_type="text/event-stream")

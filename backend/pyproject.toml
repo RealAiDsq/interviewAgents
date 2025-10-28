@@ -19,8 +19,9 @@ dependencies = [
     # （可选）docx 转 HTML/纯文本提取，若不需要可移除
     "mammoth (>=1.6.0,<2.0.0)",
     # Markdown 渲染（导出/预览链路复用）
-    "markdown (>=3.6,<4.0)"
-
+    "markdown (>=3.6,<4.0)",
+    # 外部 API 请求
+    "httpx (>=0.27.0,<0.28.0)"
 ]
 
 
