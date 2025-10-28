@@ -1,0 +1,22 @@
+name: WordLine
+channels:
+  - conda-forge
+  - defaults
+dependencies:
+  - python=3.11
+  - poetry=1.8.3
+  - nodejs
+  - pandoc
+  - fastapi=0.115.0
+  - uvicorn=0.30.6
+  - python-multipart=0.0.9
+  - markdown
+  - python-docx=1.1.2
+  - mammoth=1.8.0
+  - reportlab
+  - pip
+  - pip:
+      - wkhtmltopdf
+      - langchain_core
+      - langchain_openai
+      - pypinyin==0.55.0
